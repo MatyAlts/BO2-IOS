@@ -1,0 +1,6 @@
+.build/
+DerivedData/
+build/
+*.xcodeproj/
+.DS_Store
+ci-evidence/
