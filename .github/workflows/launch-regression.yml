@@ -1,0 +1,22 @@
+name: Launch regression RED
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  regression:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Existing safety net
+        run: swift test
+      - name: Download original experimental IPA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 41512717021 --repo MatyAlts/BO2-IOS --name RuntimeProbe-unsigned-and-verification --dir previous
+      - name: New standard-layout regression against original artifact
+        env:
+          IPA_PATH: previous/RuntimeProbe-unsigned.ipa
+        run: python3 -m unittest discover -s Tests/ArtifactTests -v
