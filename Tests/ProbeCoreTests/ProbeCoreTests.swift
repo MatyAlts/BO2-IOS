@@ -15,7 +15,7 @@ final class ProbeCoreTests: XCTestCase {
         XCTAssertFalse(LowAddressRange.isValid(address: 0x1_0000_0000, byteCount: 1))
     }
 
-    func testAssessmentRequiresEveryMeasuredInvariant() {
+    func testMemoryCallbackAssessmentRejectsIncorrectReturn() {
         let good = ProbeObservation(lowMemory: true, callbackCount: 1, canaries: true,
                                     tls: true, returnValue: 46, expectedReturn: 46)
         XCTAssertTrue(ProbeAssessment.passed(good))

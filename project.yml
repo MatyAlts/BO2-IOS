@@ -1,0 +1,46 @@
+name: RuntimeProbe
+options:
+  deploymentTarget:
+    iOS: "18.0"
+packages:
+  ProbePackage:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+targets:
+  RuntimeProbe:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: ProbePackage
+        product: ProbeCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.maty.bo2runtimeprobe
+        PRODUCT_NAME: RuntimeProbe
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        "OTHER_LDFLAGS[sdk=iphoneos*]": "$(inherited) -Wl,-pagezero_size,0x4000"
+  ProbeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests/ProbeCoreTests]
+    dependencies:
+      - package: ProbePackage
+        product: ProbeCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.maty.bo2runtimeprobe.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  RuntimeProbe:
+    build:
+      targets:
+        RuntimeProbe: all
+    test:
+      targets: [ProbeTests]
