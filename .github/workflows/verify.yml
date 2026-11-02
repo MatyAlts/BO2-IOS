@@ -30,25 +30,23 @@ jobs:
         run: |
           APP=build/RuntimeProbe.xcarchive/Products/Applications/RuntimeProbe.app
           xcrun otool -l "$APP/RuntimeProbe" > build/device-load-commands.txt
-          python3 - <<'PY'
-          import re
-          text = open('build/device-load-commands.txt').read()
-          segment = re.search(r'segname __PAGEZERO.*?vmsize (0x[0-9a-fA-F]+)', text, re.S)
-          assert segment and int(segment.group(1),16) == 0x4000, 'Reduced PAGEZERO was not produced; device experiment not ready'
-          print('Device Mach-O __PAGEZERO verified:',segment.group(1))
-          PY
+          xcrun otool -L "$APP/RuntimeProbe" > build/device-dependencies.txt
+          /usr/libexec/PlistBuddy -c Print "$APP/Info.plist" > build/device-info.txt
           mkdir -p build/ipa/Payload
           cp -R "$APP" build/ipa/Payload/
-          (cd build/ipa && zip -qr ../RuntimeProbe-unsigned.ipa Payload)
-          printf '%s\n' 'Unsigned diagnostic app; requires sideload signing. Does not contain or run BO2. Device low-memory, guest entry32 and JIT acceptance are unproven.' > build/ARTIFACT-README.txt
+          (cd build/ipa && zip -qr ../RuntimeProbe-Control-0.2.0-unsigned.ipa Payload)
+          IPA_PATH=build/RuntimeProbe-Control-0.2.0-unsigned.ipa python3 -m unittest discover -s Tests/ArtifactTests -v
+          printf '%s\n' 'Runtime Probe Control 0.2.0 (2), standard arm64 memory layout. Unsigned diagnostic app; requires sideload signing. Replaces unsupported reduced-PAGEZERO experiment. Does not contain or run BO2. Low-memory guest entry32 and JIT acceptance are unproven.' > build/ARTIFACT-README.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: RuntimeProbe-unsigned-and-verification
+          name: RuntimeProbe-Control-0.2.0-unsigned-and-verification
           path: |
-            build/RuntimeProbe-unsigned.ipa
+            build/RuntimeProbe-Control-0.2.0-unsigned.ipa
             build/ARTIFACT-README.txt
             build/device-load-commands.txt
+            build/device-dependencies.txt
+            build/device-info.txt
             build/xcode-version.txt
             build/simulator.log
             build/archive.log

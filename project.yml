@@ -19,13 +19,15 @@ targets:
         product: ProbeCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.maty.bo2runtimeprobe
+        PRODUCT_BUNDLE_IDENTIFIER: dev.maty.bo2runtimeprobe.control
         PRODUCT_NAME: RuntimeProbe
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "2"
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Runtime Probe Control
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
-        "OTHER_LDFLAGS[sdk=iphoneos*]": "$(inherited) -Wl,-pagezero_size,0x4000"
   ProbeTests:
     type: bundle.unit-test
     platform: iOS
@@ -37,10 +39,21 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.maty.bo2runtimeprobe.tests
         GENERATE_INFOPLIST_FILE: YES
+  LaunchUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [Tests/LaunchUITests]
+    dependencies:
+      - target: RuntimeProbe
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.maty.bo2runtimeprobe.launchtests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: RuntimeProbe
 schemes:
   RuntimeProbe:
     build:
       targets:
         RuntimeProbe: all
     test:
-      targets: [ProbeTests]
+      targets: [ProbeTests, LaunchUITests]
