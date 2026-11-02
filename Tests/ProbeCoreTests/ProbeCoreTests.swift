@@ -39,21 +39,33 @@ final class ProbeCoreTests: XCTestCase {
         XCTAssertGreaterThan(report.pageSize, 0)
     }
 
-    func testSyntheticRoundtripWithDistinctInputsWhenLowMemoryIsAvailable() throws {
+    func testSignedRoundtripReallyExecutesForDistinctInputs() throws {
         for input: UInt32 in [1, 7] {
-            let report = ProbeRunner.run(input: input)
-            if report.status == "unavailable" || report.status == "unsupported" {
-                XCTAssertFalse(report.callbackExecuted)
-                XCTAssertFalse(report.ilp32EntryProven)
-                continue
+            let report = ProbeRunner.runSignedRoundtrip(input: input)
+            if report.status == "unsupported" {
+                throw XCTSkip("Signed ARM64 roundtrip requires ARM64; no execution claimed")
             }
             XCTAssertEqual(report.status, "passed", report.detail)
             XCTAssertEqual(report.result, UInt64(input) * 4 + 18)
             XCTAssertTrue(report.callbackExecuted)
             XCTAssertTrue(report.tlsPreserved)
             XCTAssertTrue(report.canariesPreserved)
-            XCTAssertTrue(LowAddressRange.isValid(address: report.dataAddress, byteCount: report.pageSize))
+            XCTAssertTrue(report.stackPreserved)
+            XCTAssertTrue(report.registerCanariesPreserved)
             XCTAssertFalse(report.ilp32EntryProven, "Full-pointer signed stub never proves guest entry32")
         }
+    }
+
+    func testLowMemoryRoundtripSeparatelyWhenMappingIsAvailable() throws {
+        let report = ProbeRunner.run(input: 11)
+        if report.status == "unavailable" || report.status == "unsupported" {
+            throw XCTSkip(report.detail + "; low-memory device behavior remains unproven")
+        }
+        XCTAssertEqual(report.status, "passed", report.detail)
+        XCTAssertEqual(report.result, 62)
+        XCTAssertTrue(report.callbackExecuted)
+        XCTAssertTrue(LowAddressRange.isValid(address: report.dataAddress, byteCount: report.pageSize))
+        XCTAssertTrue(report.context32Proven)
+        XCTAssertFalse(report.ilp32EntryProven)
     }
 }
