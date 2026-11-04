@@ -8,6 +8,7 @@ let package = Package(
     targets: [
         .target(name: "CProbe", path: "Sources/CProbe", publicHeadersPath: "include"),
         .target(name: "ProbeCore", dependencies: ["CProbe"]),
-        .testTarget(name: "ProbeCoreTests", dependencies: ["ProbeCore"])
+        .testTarget(name: "ProbeCoreTests", dependencies: ["ProbeCore"]),
+        .testTarget(name: "AOTCoreTests", dependencies: [])
     ]
 )
