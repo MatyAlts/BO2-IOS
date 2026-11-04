@@ -9,8 +9,17 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Generate pinned AOT code and image snapshot
+        run: python3 Tools/AOT/prepare.py
       - name: Swift package tests
-        run: swift test
+        run: |
+          set -o pipefail
+          mkdir -p build
+          swift test | tee build/package-tests.log
+      - name: Release AOT acceptance
+        run: |
+          set -o pipefail
+          swift test -c release --filter AOTCoreTests | tee build/release-aot-tests.log
       - name: Generate Xcode project
         run: |
           if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
@@ -34,15 +43,16 @@ jobs:
           /usr/libexec/PlistBuddy -c Print "$APP/Info.plist" > build/device-info.txt
           mkdir -p build/ipa/Payload
           cp -R "$APP" build/ipa/Payload/
-          (cd build/ipa && zip -qr ../RuntimeProbe-Control-0.2.0-unsigned.ipa Payload)
-          IPA_PATH=build/RuntimeProbe-Control-0.2.0-unsigned.ipa python3 -m unittest discover -s Tests/ArtifactTests -v
-          printf '%s\n' 'Runtime Probe Control 0.2.0 (2), standard arm64 memory layout. Unsigned diagnostic app; requires sideload signing. Replaces unsupported reduced-PAGEZERO experiment. Does not contain or run BO2. Low-memory guest entry32 and JIT acceptance are unproven.' > build/ARTIFACT-README.txt
+          (cd build/ipa && zip -qr ../RuntimeProbe-Control-0.3.0-unsigned.ipa Payload)
+          IPA_PATH=build/RuntimeProbe-Control-0.3.0-unsigned.ipa python3 -m unittest discover -s Tests/ArtifactTests -v
+          cp Generated/AOTCore/Resources/ImageMetadata.json build/aot-image-metadata.json
+          printf '%s\n' 'AOT Runtime Control 0.3.0 (3), standard arm64 memory layout. Unsigned; requires sideload signing. Manual finite signed AOT initialization from a hash-pinned official guest image through its first logging import. Snapshot prepared at build time. Gameplay, rendering and JIT are unproven.' > build/ARTIFACT-README.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: RuntimeProbe-Control-0.2.0-unsigned-and-verification
+          name: RuntimeProbe-Control-0.3.0-unsigned-and-verification
           path: |
-            build/RuntimeProbe-Control-0.2.0-unsigned.ipa
+            build/RuntimeProbe-Control-0.3.0-unsigned.ipa
             build/ARTIFACT-README.txt
             build/device-load-commands.txt
             build/device-dependencies.txt
@@ -50,4 +60,7 @@ jobs:
             build/xcode-version.txt
             build/simulator.log
             build/archive.log
+            build/package-tests.log
+            build/release-aot-tests.log
+            build/aot-image-metadata.json
           if-no-files-found: warn

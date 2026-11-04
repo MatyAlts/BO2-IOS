@@ -7,3 +7,5 @@ ci-evidence/
 artifacts/
 __pycache__/
 *.pyc
+Generated/
+GeneratedInputs/

@@ -1,5 +1,6 @@
 import SwiftUI
 import ProbeCore
+import AOTCore
 import Darwin
 
 @main
@@ -10,6 +11,22 @@ struct RuntimeProbeApp: App {
 private struct ProbeView: View {
     @State private var report = ProbeRunner.baseline()
     @State private var lastExperiment = "Not run"
+    @State private var aotReport: AOTReport?
+    @State private var aotRunning = false
+    @State private var aotError: String?
+
+    private var appVersion: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        return "\(version) (\(build))"
+    }
+
+    private var aotReportText: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = aotReport.flatMap { try? encoder.encode($0) } ?? Data()
+        return "App: AOT Runtime Control \(appVersion)\nDevice: \(machine())\nSystem: \(UIDevice.current.systemName) \(UIDevice.current.systemVersion)\n" + String(decoding: data, as: UTF8.self)
+    }
 
     private var reportText: String {
         let encoder = JSONEncoder()
@@ -23,9 +40,35 @@ private struct ProbeView: View {
         NavigationStack {
             List {
                 Section("Diagnostic experiment") {
-                    Text("This app does not contain or run Black Ops II.")
-                    Text("A signed synthetic callback tests stack, registers and thread state. Guest entry32, engine TLS and JIT remain unproven.")
+                    Text("Partial Multiplayer bootstrap experiment")
+                    Text("Signed AOT runs a finite translated initialization path through its first log. Gameplay, rendering and JIT remain unproven.")
                         .font(.footnote)
+                }
+                Section("Real MP initialization · \(appVersion)") {
+                    Button(aotRunning ? "Running translated initialization…" : "3. Run signed MP AOT bootstrap") {
+                        aotRunning = true
+                        aotError = nil
+                        aotReport = nil
+                        Task { @MainActor in
+                            defer { aotRunning = false }
+                            do {
+                                aotReport = try await Task.detached(priority: .userInitiated) { try AOTRunner.run() }.value
+                            } catch {
+                                aotError = error.localizedDescription
+                            }
+                        }
+                    }
+                    .disabled(aotRunning)
+                    .accessibilityIdentifier("run-aot-bootstrap")
+                    if let value = aotReport {
+                        Text("AOT result: \(value.status)").accessibilityIdentifier("aot-result")
+                        Text(value.message).font(.system(.footnote, design: .monospaced)).accessibilityIdentifier("aot-message")
+                        Text("Translated instructions: \(value.steps) · host calls: \(value.hostCalls)")
+                        Text("Signed native \(value.nativeArchitecture) · JIT unused")
+                        Text("The verified ELF snapshot was loaded and relocated at build time.").font(.footnote)
+                        ShareLink("Share AOT measured report", item: aotReportText)
+                    }
+                    if let value = aotError { Text(value).foregroundStyle(.red) }
                 }
                 Section("Run manually") {
                     Button("1. Signed ARM64 baseline") {
@@ -52,7 +95,7 @@ private struct ProbeView: View {
                     Text(reportText).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
                 }
             }
-            .navigationTitle("Runtime Probe")
+            .navigationTitle("AOT Runtime Control")
         }
     }
 
